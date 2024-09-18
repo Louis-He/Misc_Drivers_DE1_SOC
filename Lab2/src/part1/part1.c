@@ -42,7 +42,7 @@ int main(void)
 		unsigned int edge_reg = (*KEY_ptr & 0xF);
 		if (edge_reg != 0) {
 			stop = stop ^ 0x1;
-			*KEY_ptr = edge_reg;
+			*KEY_ptr = edge_reg;  // Clear the interrupt
 		}
 
 
