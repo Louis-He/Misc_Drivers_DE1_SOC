@@ -126,13 +126,13 @@ static int __init initialize_handler(void)
     *(interval_timer_ptr + 3) = 0xF;
 
     // register the interrupt handler
-    int ret = request_irq (KEY_IRQ, (irq_handler_t) timer_irq_handler, IRQF_SHARED,
+    ret |= request_irq (KEY_IRQ, (irq_handler_t) timer_irq_handler, IRQF_SHARED,
         "timer_irq_handler", (void *) (timer_irq_handler));
 
     // start the timer and enable interrupts
     *(interval_timer_ptr + 1) = 7; 
 
-    return 0;
+    return ret;
 }
 
 static void __exit cleanup_handler(void)
