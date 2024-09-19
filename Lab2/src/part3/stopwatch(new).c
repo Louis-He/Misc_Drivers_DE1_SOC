@@ -34,7 +34,7 @@ void display_on_HEX(void)
     int second_ms_digit, second_ls_digit;
     int millisecond_ms_digit, millisecond_ls_digit;
 
-    printk(KERN_INFO "Displaying on HEX: %02d:%02d:%02d\n", minute, second, millisecond);
+    // printk(KERN_INFO "Displaying on HEX: %02d:%02d:%02d\n", minute, second, millisecond);
 
     // Calculate digits for minute
     minute_ms_digit = minute / 10;
@@ -74,8 +74,8 @@ irq_handler_t key_irq_handler(int irq, void *dev_id, struct pt_regs *regs)
 
     edge_reg = (*(KEY_ptr+3) & 0xF);
     if (edge_reg != 0) {
-        printk(KERN_INFO "key edge register %x\n", edge_reg);
-        printk(KERN_INFO "SW register %x\n", sw_value);
+        // printk(KERN_INFO "key edge register %x\n", edge_reg);
+        // printk(KERN_INFO "SW register %x\n", sw_value);
 
         if ((edge_reg & 0x1) != 0) {
             // stop or start the timer
@@ -90,14 +90,26 @@ irq_handler_t key_irq_handler(int irq, void *dev_id, struct pt_regs *regs)
         }
         if ((edge_reg & 0x2) != 0) {
             // set millisecond to sw_value
+            if (sw_value > 99) {
+                sw_value = 99;
+            }
             millisecond = sw_value;
+
+            printk(KERN_ERR "\e[2J\e[10;10H------------\e[11;10H| %d%d:%d%d:%d%d |\e[12;10H------------\n", minute / 10, minute % 10, second / 10, second % 10, millisecond / 10, millisecond % 10);
+
         }
         if ((edge_reg & 0x4) != 0) {
             // set second to sw_value
+            if (sw_value > 59) {
+                sw_value = 59;
+            }
             second = sw_value;
         } 
         if ((edge_reg & 0x8) != 0) {
             // set minute to sw_value
+            if (sw_value > 59) {
+                sw_value = 59;
+            }
             minute = sw_value;
         }
 
@@ -137,7 +149,7 @@ void decrement_clock(void)
 
 irq_handler_t timer_irq_handler(int irq, void *dev_id, struct pt_regs *regs)
 {
-    printk(KERN_INFO "Timer Interrupt called\n");
+    // printk(KERN_INFO "Timer Interrupt called\n");
     // Clear the interrupt
     *(interval_timer_ptr) = *(interval_timer_ptr) & 0x2;
 
@@ -166,9 +178,10 @@ static int __init initialize_handler(void)
     *(KEY_ptr + 2) = 0xF; 
 
     HEX3_HEX0_ptr = LW_virtual + HEX3_HEX0_BASE;   // init virtual address for HEX port
-    *HEX3_HEX0_ptr = seg7[0] << 24 | seg7[0] << 16 | seg7[0] << 8 | seg7[0];   // display 0000
+    // *HEX3_HEX0_ptr = seg7[0] << 24 | seg7[0] << 16 | seg7[0] << 8 | seg7[0];   // display 0000
     HEX5_HEX4_ptr = LW_virtual + HEX5_HEX4_BASE;   // init virtual address for HEX port
-    *HEX5_HEX4_ptr = seg7[0] << 8 | seg7[0];   // display 00
+    // *HEX5_HEX4_ptr = seg7[0] << 8 | seg7[0];   // display 00
+    display_on_HEX();
 
     // register the interrupt handler, and then return
     ret = request_irq (KEY_IRQ, (irq_handler_t) key_irq_handler, IRQF_SHARED,
