@@ -123,6 +123,7 @@ static ssize_t device_read(struct file *filp, char *buffer, size_t length, loff_
     char key_value[2];
 
     key_value[0] = *(KEY_ptr + 3);
+    printk(KERN_INFO "Key value: %d\n", key_value[0]);
 
     // clear edge register
     *(KEY_ptr + 3) = key_value[0]; 
@@ -140,7 +141,7 @@ static ssize_t device_read(struct file *filp, char *buffer, size_t length, loff_
         printk(KERN_ERR "Error: copy_to_user unsuccessful\n");
     }
 
-    printk(KERN_INFO "Key value: %c\n", key_value);
+    printk(KERN_INFO "Key value: %c\n", key_value[0]);
     *offset = 2;
     return 2;
 }

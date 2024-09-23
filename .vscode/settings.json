@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "address_map_arm_vm.h": "c",
+        "address_map_arm.h": "c"
+    }
+}
