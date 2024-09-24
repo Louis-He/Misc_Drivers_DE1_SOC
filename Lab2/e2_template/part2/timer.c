@@ -38,30 +38,6 @@ irq_handler_t key_irq_handler(int irq, void *dev_id, struct pt_regs *regs)
     return (irq_handler_t) IRQ_HANDLED;
 }
 
-// void display_on_HEX(void)
-// {
-//     printk(KERN_INFO "Displaying on HEX: %02d:%02d:%02d\n", minute, second, millisecond);
-    
-//     int ms_digit = 0;
-//     int ls_digit = 0;
-
-//     // Display the millisecond digits
-//     ms_digit = millisecond / 10;
-//     ls_digit = millisecond % 10;
-
-//     *HEX3_HEX0_ptr = seg7[ms_digit] << 8 | seg7[ls_digit];
-
-//     // Display the second digits
-//     ms_digit = second / 10;
-//     ls_digit = second % 10;
-//     *HEX3_HEX0_ptr = seg7[ms_digit] << 24 | seg7[ls_digit] << 16;
-
-//     // Display the minute digits
-//     ms_digit = minute / 10;
-//     ls_digit = minute % 10;
-//     *HEX5_HEX4_ptr = seg7[ms_digit] << 8 | seg7[ls_digit];
-// }
-
 void display_on_HEX(void)
 {
     int ms_digit, ls_digit;
@@ -90,13 +66,6 @@ void display_on_HEX(void)
     // Set the HEX display for minutes
     *HEX5_HEX4_ptr = (seg7[minute_ms_digit] << 8) | seg7[minute_ls_digit];
 }
-
-
-
-
-
-
-
 
 void increment_clock(void)
 {

@@ -117,8 +117,6 @@ irq_handler_t key_irq_handler(int irq, void *dev_id, struct pt_regs *regs)
         *(KEY_ptr + 3) = edge_reg;
     }
 
-
-
     display_on_HEX();
 
     return (irq_handler_t) IRQ_HANDLED;
