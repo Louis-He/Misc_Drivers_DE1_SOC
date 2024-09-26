@@ -24,7 +24,7 @@ static struct file_operations stopwatch_dev_fops = {
 
 #define SUCCESS 0
 
-#define STOPWATCH_DEV_NAME "STOPWATCH"
+#define STOPWATCH_DEV_NAME "stopwatch"
 
 void * LW_virtual;             // used to map physical addresses for the light-weight bridge
 volatile int* TIMER0_ptr;
@@ -92,9 +92,17 @@ static int __init start_stopwatch_dev(void)
         TIMER0_ptr = LW_virtual + TIMER0_BASE;
     }
 
-        // register the interrupt handler
+    *(TIMER0_ptr) = 0x0; // stop interval timer, clear any pending interrupts
+    // set the interval timer period for .01 second, counter top is 0xF4240
+    *(TIMER0_ptr + 2) = 0x4240;
+    *(TIMER0_ptr + 3) = 0xF;
+
+    // register the interrupt handler
     err |= request_irq (TIMER0_IRQ, (irq_handler_t) timer_irq_handler, IRQF_SHARED,
         "timer_irq_handler", (void *) (timer_irq_handler));
+
+    // Enable interrupts and start the timer
+    *(TIMER0_ptr + 1) = 3 | (1 << 2);  
 
     return err;
 }
