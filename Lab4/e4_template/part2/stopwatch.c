@@ -239,6 +239,9 @@ static ssize_t device_write(struct file *filp, const char *buffer, size_t length
             millisecond = 99;
         }
 
+        if (disp) {
+            display_on_HEX();
+        }
         printk(KERN_INFO "Set time to %02d:%02d:%02d\n", minute, second, millisecond);
     }
 
