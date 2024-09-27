@@ -124,5 +124,7 @@ int main() {
         }
     }
 
+    close(ledr_fd);
+
     return 0;
 }
