@@ -23,7 +23,6 @@ struct point points [NUMBER_OF_POINTS];
 int main(void)
 {
     srand(time(NULL));
-    
     // catch SIGINT from ^C, instead of having it abruptly close this program
     signal(SIGINT, catchSIGINT);
     // // set random initial position,
