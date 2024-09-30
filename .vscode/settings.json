@@ -4,6 +4,7 @@
         "address_map_arm.h": "c",
         "fcntl.h": "c",
         "string.h": "c",
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "unistd.h": "c"
     }
 }
