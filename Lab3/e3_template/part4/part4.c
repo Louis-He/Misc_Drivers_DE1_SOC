@@ -31,6 +31,10 @@ int main() {
         return -1;
     }
 
+    char hex_value[6];
+    sprintf(hex_value, "%06d", accu_sum);
+    write(hex_fd, hex_value, 6);
+
     while (!stop) {
         char key_value[2];
         key_fd = open("/dev/KEY", (O_RDWR | O_SYNC));
