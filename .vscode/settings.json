@@ -8,6 +8,8 @@
         "unistd.h": "c",
         "stdio.h": "c",
         "defines.h": "c",
-        "errno.h": "c"
+        "errno.h": "c",
+        "interrupt_id.h": "c",
+        "memory": "c"
     }
 }
