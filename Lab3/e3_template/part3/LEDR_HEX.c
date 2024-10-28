@@ -76,6 +76,7 @@ static int __init start_ledr_hexdev(void)
         ledr_dev_registered = 1;
 
         LEDR_ptr = LW_virtual + LEDR_BASE;
+        *LEDR_ptr = 0;
     }
 
     err = misc_register (&hex_dev);
@@ -86,6 +87,8 @@ static int __init start_ledr_hexdev(void)
         hex_dev_registered = 1;
         HEX3_HEX0_ptr = LW_virtual + HEX3_HEX0_BASE;
         HEX5_HEX4_ptr = LW_virtual + HEX5_HEX4_BASE;
+        *HEX3_HEX0_ptr = 0;
+        *HEX5_HEX4_ptr = 0;
     }
 
     return err;
@@ -93,11 +96,11 @@ static int __init start_ledr_hexdev(void)
 
 static void __exit stop_ledr_hexdev(void)
 {
-    iounmap (LW_virtual);
     if (ledr_dev_registered) {
         misc_deregister (&ledr_dev);
         printk (KERN_INFO "/dev/%s driver de-registered\n", LEDR_DEV_NAME);
 
+        *LEDR_ptr = 0;
         LEDR_ptr = NULL;
     }
 
@@ -105,9 +108,13 @@ static void __exit stop_ledr_hexdev(void)
         misc_deregister (&hex_dev);
         printk (KERN_INFO "/dev/%s driver de-registered\n", HEX_DEV_NAME);
 
+        *HEX3_HEX0_ptr = 0;
+        *HEX5_HEX4_ptr = 0;
         HEX3_HEX0_ptr = NULL;
         HEX5_HEX4_ptr = NULL;
     }
+
+    iounmap (LW_virtual);
 }
 
 static int device_open(struct inode *inode, struct file *file)

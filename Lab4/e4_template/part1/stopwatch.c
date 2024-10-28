@@ -78,10 +78,12 @@ irq_handler_t timer_irq_handler(int irq, void *dev_id, struct pt_regs *regs)
 
 static int __init start_stopwatch_dev(void)
 {
+    int err;
+
     // generate a virtual address for the FPGA lightweight bridge
     LW_virtual = ioremap_nocache (LW_BRIDGE_BASE, LW_BRIDGE_SPAN);
     
-    int err = misc_register (&stopwatch_dev);
+    err = misc_register (&stopwatch_dev);
     if (err < 0) {
         printk (KERN_ERR "/dev/%s: misc_register() failed\n", STOPWATCH_DEV_NAME);
     }
@@ -107,7 +109,7 @@ static int __init start_stopwatch_dev(void)
     return err;
 }
 
-static int __exit stop_stopwatch_dev(void)
+static void __exit stop_stopwatch_dev(void)
 {
     iounmap (LW_virtual);
     free_irq (TIMER0_IRQ, (void*) timer_irq_handler);
@@ -117,8 +119,6 @@ static int __exit stop_stopwatch_dev(void)
 
         TIMER0_ptr = NULL;
     }
-
-    return 0;
 }
 
 static int device_open(struct inode *inode, struct file *file)
@@ -135,21 +135,25 @@ static int device_release(struct inode *inode, struct file *file)
 
 static ssize_t device_read(struct file *filp, char *buffer, size_t length, loff_t *offset)
 {
-    if (length < 10)
+    char time[9];
+
+    if (length < 9)
     {
         return -EINVAL;
     }
 
-    if (*offset == 10)
+    if (*offset == 9)
     {
         return 0;
     }
-
-    char time[10];
+    
     sprintf(time, "%02d:%02d:%02d", minute, second, millisecond);
-    copy_to_user(buffer, time, 10);
-    *offset = 10;
-    return 10;
+    if (copy_to_user(buffer, time, 9)) {
+        return -EFAULT;
+    }
+    
+    *offset = 9;
+    return 9;
 }
 
 MODULE_LICENSE("GPL");

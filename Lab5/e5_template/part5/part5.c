@@ -221,8 +221,8 @@ void swap(int* x, int* y) {
 
 struct point generate_random_point() {
     struct point p;
-    p.x = rand() % X_MAX;
-    p.y = rand() % Y_MAX;
+    p.x = rand() % (X_MAX - 2) + 1;
+    p.y = rand() % (Y_MAX - 2) + 1;
     p.direction_x = rand() % 2 == 0 ? -1 : 1;
     p.direction_y = rand() % 2 == 0 ? -1 : 1;
     return p;

@@ -10,6 +10,24 @@
         "defines.h": "c",
         "errno.h": "c",
         "interrupt_id.h": "c",
-        "memory": "c"
+        "memory": "c",
+        "signal.h": "c",
+        "__bit_reference": "c",
+        "__node_handle": "c",
+        "array": "c",
+        "ios": "c",
+        "istream": "c",
+        "optional": "c",
+        "ostream": "c",
+        "sstream": "c",
+        "streambuf": "c",
+        "string_view": "c",
+        "tuple": "c",
+        "variant": "c",
+        "vector": "c",
+        "complex": "c",
+        "__locale": "c",
+        "string": "c",
+        "locale": "c"
     }
 }

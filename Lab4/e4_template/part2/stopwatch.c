@@ -76,12 +76,9 @@ void decrement_clock(void)
 
 void display_on_HEX(void)
 {
-    int ms_digit, ls_digit;
     int minute_ms_digit, minute_ls_digit;
     int second_ms_digit, second_ls_digit;
     int millisecond_ms_digit, millisecond_ls_digit;
-
-    // printk(KERN_INFO "Displaying on HEX: %02d:%02d:%02d\n", minute, second, millisecond);
 
     // Calculate digits for minute
     minute_ms_digit = minute / 10;
@@ -120,10 +117,11 @@ irq_handler_t timer_irq_handler(int irq, void *dev_id, struct pt_regs *regs)
 
 static int __init start_stopwatch_dev(void)
 {
+    int err;
     // generate a virtual address for the FPGA lightweight bridge
     LW_virtual = ioremap_nocache (LW_BRIDGE_BASE, LW_BRIDGE_SPAN);
     
-    int err = misc_register (&stopwatch_dev);
+    err = misc_register (&stopwatch_dev);
     if (err < 0) {
         printk (KERN_ERR "/dev/%s: misc_register() failed\n", STOPWATCH_DEV_NAME);
     } else {
@@ -152,7 +150,7 @@ static int __init start_stopwatch_dev(void)
     return err;
 }
 
-static int __exit stop_stopwatch_dev(void)
+static void __exit stop_stopwatch_dev(void)
 {
     iounmap (LW_virtual);
     free_irq (TIMER0_IRQ, (void*) timer_irq_handler);
@@ -164,8 +162,6 @@ static int __exit stop_stopwatch_dev(void)
         HEX3_HEX0_ptr = NULL;
         HEX5_HEX4_ptr = NULL;
     }
-
-    return 0;
 }
 
 static int device_open(struct inode *inode, struct file *file)
@@ -182,21 +178,25 @@ static int device_release(struct inode *inode, struct file *file)
 
 static ssize_t device_read(struct file *filp, char *buffer, size_t length, loff_t *offset)
 {
-    if (length < 10)
+    char time[9];
+
+    if (length < 9)
     {
         return -EINVAL;
     }
 
-    if (*offset == 10)
+    if (*offset == 9)
     {
         return 0;
     }
-
-    char time[10];
+    
     sprintf(time, "%02d:%02d:%02d", minute, second, millisecond);
-    copy_to_user(buffer, time, 10);
-    *offset = 10;
-    return 10;
+    if (copy_to_user(buffer, time, 9)) {
+        return -EFAULT;
+    }
+    
+    *offset = 9;
+    return 9;
 }
 
 static ssize_t device_write(struct file *filp, const char *buffer, size_t length, loff_t *offset)
@@ -210,7 +210,10 @@ static ssize_t device_write(struct file *filp, const char *buffer, size_t length
     {
         return -EINVAL;
     }
-    copy_from_user(command, buffer, length);
+
+    if (copy_from_user(command, buffer, length)) {
+        return -EFAULT;
+    }
 
     if (strncmp(command, "run", 3) == 0) {
         run = 1;
@@ -232,6 +235,9 @@ static ssize_t device_write(struct file *filp, const char *buffer, size_t length
         printk(KERN_INFO "Setting time to %s\n", command);
         sscanf(command, "%d:%d:%d", &minute, &second, &millisecond);
 
+        if (minute > 59) {
+            minute = 59;
+        }
         if (second > 59) {
             second = 59;
         }

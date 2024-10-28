@@ -71,6 +71,8 @@ static int __init start_video(void){
 }
 
 static void __exit stop_video(void){
+    clear_screen();
+    
     /* unmap the physical-to-virtual mappings */
     iounmap (LW_virtual);
     iounmap ((void *) pixel_buffer);

@@ -11,13 +11,17 @@
 char time_limit[10] = "00:05:00";
 double secondsTotal = 5;
 
+void catchSIGINT(int);
+
 void set_stopwatch() {
+    signal(SIGINT, catchSIGINT);
+
     int timer_fd = -1;
 
     timer_fd = open("/dev/stopwatch", (O_RDWR | O_SYNC));
     if (timer_fd == -1) {
         printf("Error opening /dev/stopwatch: %s\n", strerror(errno));
-        return -1;
+        return;
     }
     write(timer_fd, "stop", 5);
     write(timer_fd, time_limit, 9);
@@ -30,7 +34,7 @@ void set_stopwatch() {
         int key_fd = open("/dev/KEY", (O_RDWR | O_SYNC));
         if (key_fd == -1) {
             printf("Error opening /dev/KEY: %s\n", strerror(errno));
-            return -1;
+            return;
         }
         read(key_fd, key_value, 2);
         close(key_fd);
@@ -55,12 +59,11 @@ void set_stopwatch() {
             timer_fd = open("/dev/stopwatch", (O_RDWR | O_SYNC));
             if (timer_fd == -1) {
                 printf("Error opening /dev/stopwatch: %s\n", strerror(errno));
-                return -1;
+                return;
             }
-            char timer_counter[10];
-            read(timer_fd, timer_counter, 10);
+            char timer_counter[9];
+            read(timer_fd, timer_counter, 9);
 
-            printf("Timer counter: %s\n", timer_counter);
             int minute;
             int second;
             int millisecond;
@@ -71,7 +74,7 @@ void set_stopwatch() {
             int sw_int = 0;
             if (sw_fd == -1) {
                 printf("Error opening /dev/SW: %s\n", strerror(errno));
-                return -1;
+                return;
             }
             read(sw_fd, sw_value, 4);
             close(sw_fd);
@@ -85,7 +88,6 @@ void set_stopwatch() {
                     sw_int = (sw_int << 4) | (sw_value[i] - 'a' + 10);
                 }
             }
-            printf("SW value: %d\n", sw_int);
 
             if ((key & 0x8) != 0) {
                 minute = sw_int;
@@ -96,8 +98,6 @@ void set_stopwatch() {
             if ((key & 0x2) != 0) {
                 millisecond = sw_int;
             }
-
-            printf("New timer counter: %02d:%02d:%02d\n", minute, second, millisecond);
 
             sprintf(time_limit, "%02d:%02d:%02d", minute, second, millisecond);
             secondsTotal = (minute * 60 + second) + millisecond / 1000.0;
@@ -111,7 +111,7 @@ void start_time() {
     int timer_fd = open("/dev/stopwatch", (O_RDWR | O_SYNC));
     if (timer_fd == -1) {
         printf("Error opening /dev/stopwatch: %s\n", strerror(errno));
-        return -1;
+        return;
     }
     write(timer_fd, "run", 4);
     close(timer_fd);
@@ -121,7 +121,7 @@ void reset_time() {
     int timer_fd = open("/dev/stopwatch", (O_RDWR | O_SYNC));
     if (timer_fd == -1) {
         printf("Error opening /dev/stopwatch: %s\n", strerror(errno));
-        return -1;
+        return;
     }
     write(timer_fd, time_limit, 9);
     close(timer_fd);
@@ -156,19 +156,9 @@ int generate_problem(int max) {
 
 /**  your part 4 user code here  **/
 int main() {
-    int key_fd = -1;
-    int sw_fd = -1;
-
     int timer_fd = -1;
-    int ledr_fd = -1;
 
     srand(time(NULL));
-
-    ledr_fd = open("/dev/LEDR", (O_RDWR | O_SYNC));
-    if (ledr_fd == -1) {
-        printf("Error opening /dev/LEDR: %s\n", strerror(errno));
-        return -1;
-    }
 
     printf("Set stopwatch if desired. Press KEY0 to start\n");
     set_stopwatch();
@@ -211,7 +201,30 @@ int main() {
     }
 
     printf("Time expired! You answered %d questions, in an average of %.2lf second\n", correct_count, secondsUsedTotal / correct_count);
-    close(ledr_fd);
+
+    timer_fd = open("/dev/stopwatch", (O_RDWR | O_SYNC));
+    if (timer_fd == -1) {
+        printf("Error opening /dev/stopwatch: %s\n", strerror(errno));
+        return -1;
+    }
+    write(timer_fd, "stop", 5);
+    write(timer_fd, "nodisp", 7);
+    close(timer_fd);
 
     return 0;
+}
+
+/* Function to allow clean exit of the program */
+void catchSIGINT(int signum)
+{
+    int timer_fd = open("/dev/stopwatch", (O_RDWR | O_SYNC));
+    if (timer_fd == -1) {
+        printf("Error opening /dev/stopwatch: %s\n", strerror(errno));
+        return;
+    }
+    write(timer_fd, "stop", 5);
+    write(timer_fd, "nodisp", 7);
+    close(timer_fd);
+
+    exit(0);
 }

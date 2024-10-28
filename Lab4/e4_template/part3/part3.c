@@ -11,6 +11,8 @@ int run = 1;
 void catchSIGINT(int);
 
 int main() {
+    signal(SIGINT, catchSIGINT);
+
     int key_fd = -1;
     int sw_fd = -1;
 
@@ -29,6 +31,7 @@ int main() {
         return -1;
     }
     write(timer_fd, "disp", 5);
+    write(timer_fd, "run", 4);
     close(timer_fd);
 
     while (!stop) {
@@ -124,7 +127,24 @@ int main() {
         }
     }
 
+    timer_fd = open("/dev/stopwatch", (O_RDWR | O_SYNC));
+    if (timer_fd == -1) {
+        printf("Error opening /dev/stopwatch: %s\n", strerror(errno));
+        return -1;
+    }
+    write(timer_fd, "stop", 5);
+    write(timer_fd, "nodisp", 7);
+    close(timer_fd);
+
+    write(ledr_fd, "0000", 4);
     close(ledr_fd);
 
     return 0;
+}
+
+/* Function to allow clean exit of the program */
+void catchSIGINT(int signum)
+{
+    run = 0;
+    stop = 1;
 }
