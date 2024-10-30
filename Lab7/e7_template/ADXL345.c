@@ -101,32 +101,82 @@ void calc_offsets(int16_t mg_per_lsb, int avx, int avy, int avz,
 
 // Set up pin muxing (in sysmgr) to connect ADXL345 wires to I2C0
 void Pinmux_Config() {
-
+    *(SYSMGR_virtual + SYSMGR_I2C0USEFPGA) = 0; // Set SYSMGR_I2C0USEFPGA
+    *(SYSMGR_virtual + SYSMGR_GENERALIO7) = 1; // Set SYSMGR_GENERALIO7
+    *(SYSMGR_virtual + SYSMGR_GENERALIO8) = 1; // Set SYSMGR_GENERALIO8
 }
 
 // Initialize the I2C0 controller for use with the ADXL345 chip
 void I2C0_Init() {
+    *(I2C0_virtual + I2C0_ENABLE) = 2; // Disable I2C0_ENABLE first
 
+    while ((*(I2C0_virtual + I2C0_ENABLE_STATUS) & 0x1) == 1); // Wait for I2C0_ENABLE_STATUS until its disabled
+
+    *(I2C0_virtual + I2C0_CON) = 0x65; // Set I2C0_CON
+    *(I2C0_virtual + I2C0_TAR) = 0x53; // Set I2C0_TAR
+    *(I2C0_virtual + I2C0_FS_SCL_HCNT) = 60 + 30; // Set I2C0_FS_SCL_HCNT
+    *(I2C0_virtual + I2C0_FS_SCL_LCNT) = 130 + 30; // Set I2C0_FS_SCL_LCNT
+
+    *(I2C0_virtual + I2C0_ENABLE) = 1; // Enable I2C0_ENABLE
+
+    while ((*(I2C0_virtual + I2C0_ENABLE_STATUS) & 0x1) == 0); // Wait for I2C0_ENABLE_STATUS until its enabled
 }
 
 // Write value to internal register at address
 void ADXL345_REG_WRITE(uint8_t address, uint8_t value) {
+    *(I2C0_virtual + I2C0_DATA_CMD) = address + 0x400; // Send reg address to I2C0_DATA_CMD to send START signal
 
+    *(I2C0_virtual + I2C0_DATA_CMD) = value; // Send value to I2C0_DATA_CMD
 }
 
 // Read value from internal register at address
 void ADXL345_REG_READ(uint8_t address, uint8_t *value) {
+    *(I2C0_virtual + I2C0_DATA_CMD) = address + 0x400; // Send reg address to I2C0_DATA_CMD to send START signal
 
+    *(I2C0_virtual + I2C0_DATA_CMD) = 0x100; // Send read signal to I2C0_DATA_CMD
+
+    while (*(I2C0_virtual + I2C0_RXFLR) == 0); // Wait for I2C0_RXFLR until its not empty
+
+    *value = *(I2C0_virtual + I2C0_DATA_CMD); // Read value from I2C0_DATA_CMD
 }
 
 // Read multiple consecutive internal registers
 void ADXL345_REG_MULTI_READ(uint8_t address, uint8_t values[], uint8_t len) {
+    *(I2C0_virtual + I2C0_DATA_CMD) = address + 0x400; // Send reg address to I2C0_DATA_CMD to send START signal
 
+    int i;
+    for (i = 0; i < len; i++) {
+        *(I2C0_virtual + I2C0_DATA_CMD) = 0x100; // Send read signal to I2C0_DATA_CMD
+    }
+
+    int nth_byte = 0;
+    while (len) {
+        if (*(I2C0_virtual + I2C0_RXFLR) > 0) {
+            values[nth_byte] = *(I2C0_virtual + I2C0_DATA_CMD); // Read value from I2C0_DATA_CMD
+            nth_byte++;
+            len--;
+        }
+    }
 }
 
 // Initialize the ADXL345 chip
 void ADXL345_Init() {
+    ADXL345_REG_WRITE(ADXL345_REG_DATA_FORMAT, XL345_RANGE_16G | XL345_10BIT); // Set ADXL345_REG_DATA_FORMAT
 
+    ADXL345_REG_WRITE(ADXL345_REG_BW_RATE, XL345_RATE_12_5); // Set ADXL345_REG_BW_RATE
+
+    ADXL345_REG_WRITE(ADXL345_REG_THRESH_ACT, 0x04); // Set ADXL345_REG_THRESH_ACT
+    ADXL345_REG_WRITE(ADXL345_REG_THRESH_INACT, 0x02); // Set ADXL345_REG_THRESH_INACT
+
+    ADXL345_REG_WRITE(ADXL345_REG_TIME_INACT, 0x02); // Set ADXL345_REG_TIME_INACT
+    ADXL345_REG_WRITE(ADXL345_REG_ACT_INACT_CTL, 0xFF); // Set ADXL345_REG_ACT_INACT_CTL
+    ADXL345_REG_WRITE(ADXL345_REG_INT_ENABLE, XL345_ACTIVITY | XL345_INACTIVITY );
+
+    // stop measure
+    ADXL345_REG_WRITE(ADXL345_REG_POWER_CTL, XL345_STANDBY);
+
+    // start measure
+    ADXL345_REG_WRITE(ADXL345_REG_POWER_CTL, XL345_MEASURE);
 }
 
 // Calibrate the ADXL345. The DE1-SoC should be placed on a flat
@@ -137,11 +187,16 @@ void ADXL345_Calibrate() {
 
 // Read acceleration data of all three axes
 void ADXL345_XYZ_Read(int16_t szData16[3]) {
+    uint8_t szData8[6];
+    ADXL345_REG_MULTI_READ(0x32, (uint8_t *)&szData8, sizeof(szData8));
 
+    szData16[0] = (szData8[1] << 8) | szData8[0];
+    szData16[1] = (szData8[3] << 8) | szData8[2];
+    szData16[2] = (szData8[5] << 8) | szData8[4];
 }
 
 // Read the ID register
 void ADXL345_IdRead(uint8_t *pId) {
-
+    ADXL345_REG_READ(ADXL345_REG_DEVID, pId);
 }
 

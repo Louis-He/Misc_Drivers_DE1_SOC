@@ -28,6 +28,7 @@
         "complex": "c",
         "__locale": "c",
         "string": "c",
-        "locale": "c"
+        "locale": "c",
+        "physical.h": "c"
     }
 }
