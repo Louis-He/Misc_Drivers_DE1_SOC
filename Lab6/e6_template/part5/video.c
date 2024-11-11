@@ -247,22 +247,29 @@ static ssize_t video_write(struct file *filp, const char *buffer, size_t length,
     } else if (strncmp(msg, "pixel", 5) == 0) {
         char *token = msg + 6;
         int x, y, color;
-        sscanf(token, "%d,%d 0x%x", &x, &y, &color);
-        plot_pixel(x, y, color);
+        int ret = sscanf(token, "%d,%d 0x%x", &x, &y, &color);
 
-        // *(pixel_ctrl_ptr+3) =  *(pixel_ctrl_ptr+3) | 0x1;
+        if (ret == 3) {
+            plot_pixel(x, y, color);
+        }
     } else if (strncmp(msg, "line", 4) == 0) {
         char *token = msg + 5;
         int x0, x1, y0, y1, color;
-        sscanf(token, "%d,%d %d,%d 0x%x", &x0, &y0, &x1, &y1, &color);
-        plot_line(x0, x1, y0, y1, color);
+        int ret = sscanf(token, "%d,%d %d,%d 0x%x", &x0, &y0, &x1, &y1, &color);
+
+        if (ret == 5) {
+            plot_line(x0, x1, y0, y1, color);
+        }
     } else if (strncmp(msg, "sync", 4) == 0) {
         sync_video();
     } else if (strncmp(msg, "box", 3) == 0) {
         char *token = msg + 4;
         int x0, x1, y0, y1, color;
-        sscanf(token, "%d,%d %d,%d 0x%x", &x0, &y0, &x1, &y1, &color);
-        plot_box(x0, y0, x1, y1, color);
+        int ret = sscanf(token, "%d,%d %d,%d 0x%x", &x0, &y0, &x1, &y1, &color);
+
+        if (ret == 5) {
+            plot_box(x0, y0, x1, y1, color);
+        }
     }
 
     return length;

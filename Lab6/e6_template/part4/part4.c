@@ -98,12 +98,13 @@ void draw_figure() {
     int i = 0;
     clean_screen();
 
-    for (i = 0; i < NUMBER_OF_POINTS - 1; i++) {
+    for (i = 0; i < NUMBER_OF_POINTS; i++) {
         struct point p1 = points[i];
         struct point p2 = points[(i + 1) % NUMBER_OF_POINTS];
 
         draw_line(p1.x, p2.x, p1.y, p2.y, WHITE);
     }
+    
 
     for (i = 0; i < NUMBER_OF_POINTS; i++) {
         struct point p = points[i];

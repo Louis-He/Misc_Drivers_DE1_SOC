@@ -135,6 +135,11 @@ void draw_figure(int draw_lines) {
     clean_screen();
 
     if (draw_lines) {
+        if (num_points > 1) {
+            struct point p1 = points[0];
+            struct point p2 = points[num_points - 1];
+            draw_line(p1.x, p2.x, p1.y, p2.y, WHITE, '+');
+        }
         for (i = 0; i < num_points - 1; i++) {
             struct point p1 = points[i];
             struct point p2 = points[(i + 1) % num_points];

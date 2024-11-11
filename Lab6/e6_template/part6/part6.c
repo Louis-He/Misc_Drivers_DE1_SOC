@@ -129,7 +129,7 @@ int main(void)
         draw_figure(sw_int == 0);
         
         char text[10];
-        sprintf(text, "%10d\0", frame_counter);
+        sprintf(text, "frame:%d\0", frame_counter);
         draw_text(0, 0, text);
 
         update_points();
@@ -137,6 +137,8 @@ int main(void)
     }
 
     clean_screen();
+    sprintf (command, "erase\n"); 
+    write (video_FD, command, strlen(command));
 
     sprintf (command, "sync\n");
     write (video_FD, command, strlen(command));
@@ -166,7 +168,7 @@ void draw_figure(int is_draw_lines) {
     clean_screen();
 
     if (is_draw_lines) {
-        for (i = 0; i < num_points - 1; i++) {
+        for (i = 0; i < num_points; i++) {
             struct point p1 = points[i];
             struct point p2 = points[(i + 1) % num_points];
 
@@ -186,8 +188,9 @@ void draw_figure(int is_draw_lines) {
 
 void draw_text(int x, int y, char* str) {
     char command[64];
-    sprintf (command, "text %d,%d %s\n", x, y, str);
-    write (video_FD, command, strlen(command));
+    sprintf (command, "text %d,%d %s\0", x, y, str);
+    // printf("Drawing text: %s\n", command);
+    write (video_FD, command, strlen(command) + 1);
 }
 
 void update_points() {
@@ -224,8 +227,8 @@ void clean_screen() {
     sprintf (command, "clear\n"); 
     write (video_FD, command, strlen(command));
 
-    sprintf (command, "erase\n"); 
-    write (video_FD, command, strlen(command));
+    // sprintf (command, "erase\n"); 
+    // write (video_FD, command, strlen(command));
 }
 
 void plot_pixel(int x, int y, char color) {

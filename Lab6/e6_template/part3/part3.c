@@ -7,9 +7,14 @@
 
 #define video_BYTES 8
 
+int run = 1; // used to exit the program cleanly
+void catchSIGINT(int);
+
 /**  your part 3 user code here  **/
 int screen_x, screen_y;
 int main() {
+    signal(SIGINT, catchSIGINT);
+
     int video_FD; // file descriptor
     char video_buffer[video_BYTES]; // buffer for video char data
     char command[64]; // buffer for command data
@@ -28,7 +33,7 @@ int main() {
     /* Draw a few lines */
     int i = 0;
     int dir = 1;
-    while (1) {
+    while (run) {
         write(video_FD, command, strlen(command));
 
         sprintf (command, "line %d,%d %d,%d 0x%x\n", 0, i, screen_x - 1,
@@ -46,7 +51,18 @@ int main() {
             dir = -dir;
         }
     }
-    
+
+    printf("Exiting...\n");
+    sprintf(command, "clear");
+    write (video_FD, command, strlen(command));
+
+    sprintf(command, "sync");
+    write (video_FD, command, strlen(command));
+
     close (video_FD);
     return 0;
+}
+
+void catchSIGINT(int signum) {
+    run = 0;
 }

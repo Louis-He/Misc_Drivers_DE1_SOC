@@ -182,7 +182,77 @@ void ADXL345_Init() {
 // Calibrate the ADXL345. The DE1-SoC should be placed on a flat
 // surface, and must remain stationary for the duration of the calibration.
 void ADXL345_Calibrate() {
+    int average_x = 0;
+    int average_y = 0;
+    int average_z = 0;
+    int16_t XYZ[3];
+    int8_t offset_x;
+    int8_t offset_y;
+    int8_t offset_z;
 
+    // stop measure
+    ADXL345_REG_WRITE(ADXL345_REG_POWER_CTL, XL345_STANDBY);
+    
+    // Get current offsets
+    ADXL345_REG_READ(ADXL345_REG_OFSX, (uint8_t *)&offset_x);
+    ADXL345_REG_READ(ADXL345_REG_OFSY, (uint8_t *)&offset_y);
+    ADXL345_REG_READ(ADXL345_REG_OFSZ, (uint8_t *)&offset_z);
+
+    // Use 100 hz rate for calibration. Save the current rate.
+    uint8_t saved_bw;
+    ADXL345_REG_READ(ADXL345_REG_BW_RATE, &saved_bw);
+    ADXL345_REG_WRITE(ADXL345_REG_BW_RATE, XL345_RATE_100);
+    
+    // Use 16g range, full resolution. Save the current format.
+    uint8_t saved_dataformat;
+    ADXL345_REG_READ(ADXL345_REG_DATA_FORMAT, &saved_dataformat);
+    ADXL345_REG_WRITE(ADXL345_REG_DATA_FORMAT, XL345_RANGE_16G | XL345_FULL_RESOLUTION);
+
+    // start measure
+    ADXL345_REG_WRITE(ADXL345_REG_POWER_CTL, XL345_MEASURE);
+    
+    // Get the average x,y,z accelerations over 32 samples (LSB 3.9 mg)
+    int i = 0;
+    while (i < 32){
+		// Note: use DATA_READY here, can't use ACTIVITY because board is stationary.
+        if (ADXL345_IsDataReady()){
+            ADXL345_XYZ_Read(XYZ);
+            average_x += XYZ[0];
+            average_y += XYZ[1];
+            average_z += XYZ[2];
+            i++;
+        }
+    }
+
+    average_x = ROUNDED_DIVISION(average_x, 32);
+    average_y = ROUNDED_DIVISION(average_y, 32);
+    average_z = ROUNDED_DIVISION(average_z, 32);
+    
+    // stop measure
+    ADXL345_REG_WRITE(ADXL345_REG_POWER_CTL, XL345_STANDBY);
+    
+    // printf("Average X=%d, Y=%d, Z=%d\n", average_x, average_y, average_z);
+    
+    // Calculate the offsets (LSB 15.6 mg)
+    offset_x += ROUNDED_DIVISION(0-average_x, 4);
+    offset_y += ROUNDED_DIVISION(0-average_y, 4);
+    offset_z += ROUNDED_DIVISION(256-average_z, 4);
+    
+    // printf("Calibration: offset_x: %d, offset_y: %d, offset_z: %d (LSB: 15.6 mg)\n",offset_x,offset_y,offset_z);
+    
+    // Set the offset registers
+    ADXL345_REG_WRITE(ADXL345_REG_OFSX, offset_x);
+    ADXL345_REG_WRITE(ADXL345_REG_OFSY, offset_y);
+    ADXL345_REG_WRITE(ADXL345_REG_OFSZ, offset_z);
+    
+    // Restore original bw rate
+    ADXL345_REG_WRITE(ADXL345_REG_BW_RATE, saved_bw);
+    
+    // Restore original data format
+    ADXL345_REG_WRITE(ADXL345_REG_DATA_FORMAT, saved_dataformat);
+    
+    // start measure
+    ADXL345_REG_WRITE(ADXL345_REG_POWER_CTL, XL345_MEASURE);
 }
 
 // Read acceleration data of all three axes
@@ -200,3 +270,14 @@ void ADXL345_IdRead(uint8_t *pId) {
     ADXL345_REG_READ(ADXL345_REG_DEVID, pId);
 }
 
+// Return if there is any new data that hasn't been read yet
+bool ADXL345_IsDataReady(){
+    bool bReady = false;
+    uint8_t data8;
+    
+    ADXL345_REG_READ(ADXL345_REG_INT_SOURCE, &data8);
+    if (data8 & XL345_DATAREADY)
+        bReady = true;
+    
+    return bReady;
+}

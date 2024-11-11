@@ -159,7 +159,7 @@ void draw_figure(int is_draw_lines) {
     clean_screen();
 
     if (is_draw_lines) {
-        for (i = 0; i < num_points - 1; i++) {
+        for (i = 0; i < num_points; i++) {
             struct point p1 = points[i];
             struct point p2 = points[(i + 1) % num_points];
 
