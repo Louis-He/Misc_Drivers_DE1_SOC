@@ -20,6 +20,7 @@
 #define KEY_PRESSED 1
 
 #define video_BYTES 8
+#define NODE_MAX 512
 
 #define BALCK 0x0000
 #define RED 0xF800
@@ -54,7 +55,7 @@ struct audio_note_event {
 static bool prev_key_pressed[13];
 static bool key_pressed[13];
 static double key_val[13];
-static struct audio_note_event recorded_notes[200];
+static struct audio_note_event recorded_notes[NODE_MAX];
 static int recorded_num = 0;
 static int playing_idx = 0;
 
@@ -353,14 +354,31 @@ int main(int argc, char *argv[]) {
             memcpy(prev_key_pressed, key_pressed, sizeof(bool) * 13);
             
             if (is_diff) {
-                printf("Recording key change\n");
+                printf("Recording key change: %d\n", recorded_num);
                 recorded_notes[recorded_num] = (struct audio_note_event){timer_val_in_millis, convert_key_array_to_int(key_pressed)};
                 recorded_num++;
+            }
+
+            if (recorded_num >= NODE_MAX - 1) {
+                for (i = 0; i < 13; i++) {
+                    key_pressed[i] = false;
+                }
+                recorded_notes[recorded_num] = (struct audio_note_event){timer_val_in_millis, 0};
+                recorded_num++;
+
+                is_recording = false;
+                timer_fd = open("/dev/stopwatch", (O_RDWR | O_SYNC));
+                if (timer_fd == -1) {
+                    printf("Error opening /dev/stopwatch\n");
+                    return;
+                }
+                write(timer_fd, "stop", 5);
+                close(timer_fd);
             }
         } else if (is_playing) {
             // play the recorded notes
             struct audio_note_event note_event = recorded_notes[playing_idx];
-            printf("Playing note at %d, %u %u\n", playing_idx, note_event.time_stamp, timer_val_in_millis);
+            // printf("Playing note at %d, %u %u\n", playing_idx, note_event.time_stamp, timer_val_in_millis);
             if (note_event.time_stamp >= timer_val_in_millis) {
                 int j;
                 for (j = 0; j < 13; j++) {
