@@ -31,10 +31,14 @@
 #define WHITE 0xFFFF
 /**  your part 3 user code here  **/
 
+void catchSIGINT(int);
+
 void* lw_bridge_virtual;
 int fd = -1;
+int keyboard_fd = -1;
 int video_FD = -1;
 int screen_x, screen_y;
+static int run = 1;
 
 double NOTES_FREQ[] = {MIDC, DFLAT, DNAT, EFLAT, ENAT, FNAT, GFLAT, GNAT, AFLAT, ANAT, BFLAT, BNAT, HIC};
 int KEY_CODE[] = {0x10, 0x3, 0x11, 0x4, 0x12, 0x13, 0x6, 0x14, 0x7, 0x15, 0x8, 0x16, 0x17};
@@ -94,7 +98,7 @@ void audio_thread() {
     int i;
     int time_stamp = 0;
 
-    while (true) {
+    while (run) {
         num_ones = 0;
         for (i = 0; i < 13; i++) {
             key_val[i] = (key_pressed[i] ? 1 : key_val[i] * 0.9995);
@@ -138,7 +142,7 @@ void render_thread() {
     char synccommand[64];
     sprintf(clearcommand, "clear");
     sprintf(synccommand, "sync");
-    while (true) {
+    while (run) {
         write (video_FD, clearcommand, strlen(clearcommand));
         for (i = 0; i < screen_x; i++) {
             x = i;
@@ -163,6 +167,8 @@ void render_thread() {
 }
 
 int main(int argc, char *argv[]) {
+    signal(SIGINT, catchSIGINT);
+
     if (argc != 2) {
         printf("Usage: %s <keyboard path>\n", argv[0]);
         return -1;
@@ -198,7 +204,7 @@ int main(int argc, char *argv[]) {
     pthread_create(&render_thread_id, NULL, render_thread, NULL);
 
     // the main thread will handle the keyboard
-    if ((fd = open (argv[1], O_RDONLY | O_NONBLOCK)) == -1) {
+    if ((keyboard_fd = open (argv[1], O_RDONLY | O_NONBLOCK)) == -1) {
         printf ("Could not open %s\n", argv[1]);
         return -1;
     }
@@ -207,9 +213,9 @@ int main(int argc, char *argv[]) {
 
     struct input_event ev;
     int event_size = sizeof (struct input_event);
-    while (1)
+    while (run)
     {
-        if (read (fd, &ev, event_size) < event_size) {
+        if (read (keyboard_fd, &ev, event_size) < event_size) {
             continue;
         }
 
@@ -228,14 +234,22 @@ int main(int argc, char *argv[]) {
         }
     }
     
+    //join threads
+    pthread_join(audio_thread_id, NULL);
+    pthread_join(render_thread_id, NULL);
+    
     char command[64]; // buffer for command data
+    sprintf (command, "clear\n"); 
+    write (video_FD, command, strlen(command));
+
     sprintf (command, "erase\n"); 
     write (video_FD, command, strlen(command));
 
     sprintf (command, "sync\n");
     write (video_FD, command, strlen(command));
+
     close(video_FD);
-    printf("Closed video\n");
+    close(keyboard_fd);
 
     unmap_mem();
     return 0;
@@ -245,4 +259,8 @@ void plot_pixel(int x, int y, short color) {
     char command[64];
     sprintf (command, "pixel %d,%d 0x%x\n", x, y, color); 
     write (video_FD, command, strlen(command));
+}
+
+void catchSIGINT(int signum) {
+    run = 0;
 }
