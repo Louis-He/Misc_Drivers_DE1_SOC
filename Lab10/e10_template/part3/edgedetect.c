@@ -66,25 +66,35 @@ void flip (struct pixel *data, int width, int height){
     // declare image as a 2-D array so that we can use the syntax image[row][column]
     struct pixel (*image)[width] = (struct pixel (*)[width]) data;
 
-    for (i = 0; i < height / 2; ++i)
+    for (i = 0; i < height / 2; ++i) {
         for (j = 0; j < width; ++j) {
-
-            /** please complete this function (you can reuse your part 2 solution)  **/
+            /**  please complete this function  **/
+            struct pixel tmp = image[i][j];
+            image[i][j] = image[height - i - 1][j];
+            image[height - i - 1][j] = tmp;
         }
+    }
 }
 
 // The video IP cores used for edge detection require the RGB 24 bits of each pixel to be
 // word aligned (aka 1 byte of padding per pixel):
 // | unused 8 bits  | red 8 bits | green 8 bits | blue 8 bits |
 void memcpy_consecutive_to_padded(struct pixel *from, volatile unsigned int *to, int pixels){
-
-    /** please implement this function (you can reuse your part 2 solution)  **/
+    /**  please implement this function  **/
+    for (int i = 0; i < pixels; i++) {
+        to[i] = 0 | (from[i].r << 16) | (from[i].g << 8) | from[i].b;
+    }
 }
 
 // Copies the word-aligned data (4 bytes) back into pixel data (3 bytes)
 void memcpy_padded_to_consecutive(volatile unsigned int *from, struct pixel *to, int pixels){
 
     /** please implement this function **/
+    for (int i = 0; i < pixels; i++) {
+        to[i].r = (from[i] >> 16) & 0xFF;
+        to[i].g = (from[i] >> 8) & 0xFF;
+        to[i].b = from[i] & 0xFF;
+    }
 }
 
 int main(int argc, char *argv[]){

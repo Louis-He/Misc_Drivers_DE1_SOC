@@ -43,6 +43,8 @@
 #define MAX_STOPWATCH_TIME 59 * 60 * 100 + 59 * 100 + 99 // 59 mins 59 seconds 99 milliseconds
 /**  your part 3 user code here  **/
 
+void catchSIGINT(int);
+
 void* lw_bridge_virtual;
 int keyboard_fd = -1;
 int timer_fd    = -1;
@@ -50,6 +52,7 @@ int video_FD    = -1;
 int ledr_fd     = -1;
 int audio_fd    = -1;
 int screen_x, screen_y;
+static int run = 1;
 
 bool is_recording = false;
 bool is_playing = false;
@@ -106,7 +109,7 @@ void audio_thread() {
     int i;
     int time_stamp = 0;
 
-    while (true) {
+    while (run) {
         num_ones = 0;
         for (i = 0; i < 13; i++) {
             key_val[i] = (key_pressed[i] ? 1 : key_val[i] * 0.9995);
@@ -158,7 +161,7 @@ void render_thread() {
     char synccommand[64];
     sprintf(clearcommand, "clear");
     sprintf(synccommand, "sync");
-    while (true) {
+    while (run) {
         // update the LEDR
         if (is_recording) {
             write(ledr_fd, "0x1", 4);
@@ -193,6 +196,8 @@ void render_thread() {
 }
 
 int main(int argc, char *argv[]) {
+    signal(SIGINT, catchSIGINT);
+
     if (argc != 2) {
         printf("Usage: %s <keyboard path>\n", argv[0]);
         return -1;
@@ -237,10 +242,10 @@ int main(int argc, char *argv[]) {
     pthread_create(&render_thread_id, NULL, render_thread, NULL);
 
     // the main thread will handle the keyboard
-    if ((keyboard_fd = open (argv[1], O_RDONLY | O_NONBLOCK)) == -1) {
-        printf ("Could not open %s\n", argv[1]);
-        return -1;
-    }
+    // if ((keyboard_fd = open (argv[1], O_RDONLY | O_NONBLOCK)) == -1) {
+    //     printf ("Could not open %s\n", argv[1]);
+    //     return -1;
+    // }
 
     set_processor_affinity(1);
 
@@ -257,7 +262,7 @@ int main(int argc, char *argv[]) {
     struct input_event ev;
     int event_size = sizeof (struct input_event);
     int key_fd; 
-    while (1)
+    while (run)
     {
         // printf("Waiting for key press\n");
         char key_value[2];
@@ -300,6 +305,10 @@ int main(int argc, char *argv[]) {
             is_recording = !is_recording;
             is_playing = false;
             printf("%s to record\n", is_recording ? "Start" : "Stop");
+            if ((keyboard_fd = open (argv[1], O_RDONLY | O_NONBLOCK)) == -1) {
+                printf ("Could not open %s\n", argv[1]);
+                return -1;
+            }
             if (is_recording) {
                 write(timer_fd, "59:59:99", 9);
                 write(timer_fd, "run", 4);
@@ -312,7 +321,8 @@ int main(int argc, char *argv[]) {
             is_playing = !is_playing;
             is_recording = false;
             printf("%s to playback\n", is_playing ? "start" : "stop");
-
+            close(keyboard_fd);
+            
             if (is_playing) {
                 write(timer_fd, "59:59:99", 9);
                 write(timer_fd, "run", 4);
@@ -403,16 +413,37 @@ int main(int argc, char *argv[]) {
         }
     }
     
+    printf("Joining threads\n"); 
+    //join threads
+    pthread_join(audio_thread_id, NULL);
+    pthread_join(render_thread_id, NULL);
+
     char command[64]; // buffer for command data
+    sprintf (command, "clear\n"); 
+    write (video_FD, command, strlen(command));
+
     sprintf (command, "erase\n"); 
     write (video_FD, command, strlen(command));
 
     sprintf (command, "sync\n");
     write (video_FD, command, strlen(command));
+
     close(video_FD);
     printf("Closed video\n");
 
+    // set stopwatch
+    if ((timer_fd = open("/dev/stopwatch", O_RDWR)) == -1) {
+        printf("Error opening /dev/stopwatch");
+        return -1;
+    }
+    write(timer_fd, "stop", 5);
+    write(timer_fd, "59:59:99", 9);
+    write(timer_fd, "nodisp", 7);
+    close(timer_fd);
+
+    write(ledr_fd, "0x0", 4); 
     close(ledr_fd);
+    close(keyboard_fd);
     return 0;
 }
 
@@ -434,4 +465,8 @@ unsigned convert_key_array_to_int(bool key_pressed[13]) {
 
 unsigned convert_stopwatch_to_timestamp(int minute, int second, int millisecond) {
     return (minute * 60 * 100 + second * 100 + millisecond);
+}
+
+void catchSIGINT(int signum) {
+    run = 0;
 }

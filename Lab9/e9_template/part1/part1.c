@@ -27,7 +27,7 @@ int main() {
         unsigned int adc_val = (*(adc_ptr + 0)) & 0xFFF;
 
         printf("ADC value of channel 0: %d\n", adc_val);
-        usleep(1000000);
+        usleep(10000);
     }
 
     // disable auto update
