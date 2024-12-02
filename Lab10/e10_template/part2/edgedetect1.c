@@ -20,60 +20,59 @@ struct pixel {
 // Read BMP file and extract the pixel values (store in data) and header (store in header)
 // Data is data[0] = BLUE, data[1] = GREEN, data[2] = RED, data[3] = BLUE, etc...
 int read_bmp(char *filename, unsigned char **header, struct pixel **data) {
-     struct pixel *data_tmp;
-     unsigned char *header_tmp;
-     FILE *file = fopen (filename, "rb");
+    struct pixel *data_tmp;
+    unsigned char *header_tmp;
+    FILE *file = fopen (filename, "rb");
 
-     if (!file) return -1;
+    if (!file) return -1;
 
-     // read the 54-byte header
-     header_tmp = malloc (54 * sizeof(unsigned char));
-     fread (header_tmp, sizeof(unsigned char), 54, file); 
+    // read the 54-byte header
+    header_tmp = malloc (54 * sizeof(unsigned char));
+    fread (header_tmp, sizeof(unsigned char), 54, file); 
 
-     // get height and width of image from the header
-     width = *(int*)(header_tmp + 18);  // width is a 32-bit int at offset 18
-     height = *(int*)(header_tmp + 22); // height is a 32-bit int at offset 22
+    // get height and width of image from the header
+    width = *(int*)(header_tmp + 18);  // width is a 32-bit int at offset 18
+    height = *(int*)(header_tmp + 22); // height is a 32-bit int at offset 22
 
-     // Read in the image
-     int size = width * height;
-     data_tmp = malloc (size * sizeof(struct pixel)); 
-     fread (data_tmp, sizeof(struct pixel), size, file); // read the data
-     fclose (file);
+    // Read in the image
+    int size = width * height;
+    data_tmp = malloc (size * sizeof(struct pixel)); 
+    fread (data_tmp, sizeof(struct pixel), size, file); // read the data
+    fclose (file);
 
-     *header = header_tmp;
-     *data = data_tmp;
+    *header = header_tmp;
+    *data = data_tmp;
 
-     return 0;
+    return 0;
 }
 
 // This function flips the image vertically. It first swaps the pixel values in the top and 
 // bottom rows, then the second row with the second-from-bottom, and so on, until finally 
 // swapping the middle two rows.
 void flip (struct pixel *data, int width, int height){
-     int i, j;
-     struct pixel tmp;
-     // declare image as a 2-D array so that we can use the syntax image[row][column]
-     struct pixel (*image)[width] = (struct pixel (*)[width]) data;
+    int i, j;
+    struct pixel tmp;
+    // declare image as a 2-D array so that we can use the syntax image[row][column]
+    struct pixel (*image)[width] = (struct pixel (*)[width]) data;
 
-     for (i = 0; i < height / 2; ++i)
-         for (j = 0; j < width; ++j) {
+    for (i = 0; i < height / 2; ++i) {
+        for (j = 0; j < width; ++j) {
+            /**  please complete this function  **/
             struct pixel tmp = image[i][j];
             image[i][j] = image[height - i - 1][j];
             image[height - i - 1][j] = tmp;
-         }
+        }
+    }
 }
 
 // The video IP cores used for edge detection require the RGB 24 bits of each pixel to be
 // word aligned (aka 1 byte of padding per pixel):
 // | unused 8 bits  | red 8 bits | green 8 bits | blue 8 bits |
 void memcpy_consecutive_to_padded(struct pixel *from, volatile unsigned int *to, int pixels){
+    /**  please implement this function  **/
     int i;
     for (i = 0; i < pixels; i++) {
-        unsigned int red_component = from[i].r << 16;
-        unsigned int green_component = from[i].g << 8;
-        unsigned int blue_component = from[i].b;
-
-        to[i] = red_component | green_component | blue_component;
+        to[i] = (from[i].r << 16) | (from[i].g << 8) | from[i].b;
     }
 }
 
@@ -112,16 +111,14 @@ int main(int argc, char *argv[]){
 
     // Set up pointer to edge-detection DMA controller using address in the FPGA system
     mem_to_stream_dma = (volatile unsigned int *)(LW_virtual + 0x3100);
-    *(mem_to_stream_dma + 3) = 0; // Turn off edge-detection hardware DMA
+    *(mem_to_stream_dma+3) = 0; // Turn off edge-detection hardware DMA
 
     // Flip the image upside down, so it will display correctly on VGA
-    flip (data, width, height);
+    // flip (data, width, height);
 
     // Write the image to the memory used for video-out and edge-detection
     memcpy_consecutive_to_padded (data, SDRAM_virtual, width*height);
-
-    *(mem_to_stream_dma + 3) = 0x4;  // Activate the DMA
-
+    
     free(header);
     free(data);
 

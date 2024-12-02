@@ -81,16 +81,17 @@ void flip (struct pixel *data, int width, int height){
 // | unused 8 bits  | red 8 bits | green 8 bits | blue 8 bits |
 void memcpy_consecutive_to_padded(struct pixel *from, volatile unsigned int *to, int pixels){
     /**  please implement this function  **/
-    for (int i = 0; i < pixels; i++) {
+    int i;
+    for (i = 0; i < pixels; i++) {
         to[i] = 0 | (from[i].r << 16) | (from[i].g << 8) | from[i].b;
     }
 }
 
 // Copies the word-aligned data (4 bytes) back into pixel data (3 bytes)
 void memcpy_padded_to_consecutive(volatile unsigned int *from, struct pixel *to, int pixels){
-
+    int i;
     /** please implement this function **/
-    for (int i = 0; i < pixels; i++) {
+    for (i = 0; i < pixels; i++) {
         to[i].r = (from[i] >> 16) & 0xFF;
         to[i].g = (from[i] >> 8) & 0xFF;
         to[i].b = from[i] & 0xFF;
@@ -223,6 +224,8 @@ int main(int argc, char *argv[]){
     // Write out the edge detected image as a bmp
     write_bmp ("edges.bmp", header, data);
 
+    *(mem_to_stream_dma + 3) = 0x4;  // Activate the DMA
+    
     free(header);
     free(data);
 

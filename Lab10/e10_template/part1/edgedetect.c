@@ -5,6 +5,7 @@
 #include <string.h>
 #include <time.h>
 #include <video.h>
+#include <stdbool.h>
 #define PI 3.141592654
 
 typedef unsigned char byte;
@@ -124,11 +125,13 @@ void gaussian_blur(struct pixel **data) {
     struct pixel (*image)[width] = (struct pixel (*)[width]) *data;
 
     /** please complete this function  **/
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
+    int i,j;
+    for (i = 0; i < height; i++) {
+        for (j = 0; j < width; j++) {
             int sum = 0;
-            for (int k = 0; k < 5; k++) {
-                for (int l = 0; l < 5; l++) {
+            int k, l;
+            for (k = 0; k < 5; k++) {
+                for (l = 0; l < 5; l++) {
                     int x = i + k - 2;
                     int y = j + l - 2;
                     if (x >= 0 && x < height && y >= 0 && y < width) {
@@ -176,20 +179,23 @@ void sobel_filter(struct pixel **data, signed int **conv_x, signed int **conv_y)
     struct pixel (*image)[width] = (struct pixel (*)[width]) *data;
 
     /**  please complete this function  **/
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
+    int i, j;
+    for (i = 0; i < height; i++) {
+        for (j = 0; j < width; j++) {
             int grad_x = 0;
             int grad_y = 0;
-            for (int i = 0; i < 3; i++) {
-                for (int j = 0; j < 3; j++) {
-                    int x = i + i - 1;
-                    int y = j + j - 1;
+            int k, l;
+            for (k = 0; k < 3; k++) {
+                for (l = 0; l < 3; l++) {
+                    int x = i + k - 1;
+                    int y = j + l - 1;
                     if (x >= 0 && x < height && y >= 0 && y < width) {
-                        grad_x += image[x][y].r * sobel_x[i][j];
-                        grad_y += image[x][y].r * sobel_y[i][j];
+                        grad_x += image[x][y].r * sobel_x[k][l];
+                        grad_y += image[x][y].r * sobel_y[k][l];
                     }
                 }
             }
+            // printf("sobel filter1 - row: %d\n", j);
             G_x[i][j] = grad_x;
             G_y[i][j] = grad_y;
             gradient[i][j].r = (abs(grad_x) + abs(grad_y)) / 2;
@@ -201,6 +207,7 @@ void sobel_filter(struct pixel **data, signed int **conv_x, signed int **conv_y)
             gradient[i][j].g = gradient[i][j].r;
             gradient[i][j].b = gradient[i][j].r;
         }
+        // printf("sobel filter - row: %d\n", i);
     }
 
 
@@ -219,28 +226,40 @@ void non_max_suppress(struct pixel **data, signed int *sobel_x, signed int *sobe
     signed int (*G_y)[width] = (signed int (*)[width]) sobel_y; // enable G_y[][]
 
     /**  please complete this function  **/
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            int angle = atan2(double(G_y[i][j]) / double(G_x[i][j])) * 180 / PI;
+    int i, j;
+    for (i = 0; i < height; i++) {
+        for (j = 0; j < width; j++) {
+            double angle = atan2((double)(G_y[i][j]), (double)(G_x[i][j])) * 180 / PI;
+
             int direction_row = 0;
             int direction_col = 0;
 
-            if (angle >= -90.0 && angle < -67.5) {
+            if (angle >= -180.0 && angle < -157.5) {
                 direction_col = -1;
+            } else if (angle >= -157.5 && angle < -112.5) {
+                direction_row = -1;
+                direction_col = -1;
+            } else if (angle >= -112.5 && angle < -67.5) {
+                direction_row = -1;
             } else if ((angle >= -67.5 && angle < -22.5)) {
                 direction_row = -1;
-                direction_col = -1;
+                direction_col = 1;
             } else if ((angle >= -22.5 && angle < 22.5)) {
-                direction_row = -1;
+                direction_col = 1;
             } else if ((angle >= 22.5 && angle < 67.5)) {
-                direction_row = -1;
+                direction_row = 1;
                 direction_col = 1;
-            } else if ((angle >= 67.5 && angle <= 90.0)) {
-                direction_col = 1;
+            } else if ((angle >= 67.5 && angle <= 112.5)) {
+                direction_row = 1;
+            } else if ((angle >= 112.5 && angle <= 157.5)) {
+                direction_row = 1;
+                direction_col = -1;
+            } else if ((angle >= 157.5 && angle <= 180.0)) {
+                direction_col = -1;
             }
 
-            bool is_larger_than_before = i + direction_row >= 0 && i + direction_row < height && j + direction_col >= 0 && j + direction_col < width && image[i][j].r > image[i + direction_row][j + direction_col].r;
-            bool is_larger_than_after = i - direction_row >= 0 && i - direction_row < height && j - direction_col >= 0 && j - direction_col < width && image[i][j].r > image[i - direction_row][j - direction_col].r;
+            bool is_larger_than_before = (i + direction_row >= 0) && (i + direction_row < height) && (j + direction_col >= 0) && (j + direction_col < width) && (image[i][j].r > image[i + direction_row][j + direction_col].r);
+            bool is_larger_than_after = (i - direction_row >= 0) && (i - direction_row < height) && (j - direction_col >= 0) && (j - direction_col < width) && (image[i][j].r > image[i - direction_row][j - direction_col].r);
 
             if (is_larger_than_before && is_larger_than_after) {
                 temp_data[i][j].r = image[i][j].r;
@@ -266,13 +285,15 @@ void hysteresis_filter(struct pixel ** data) {
     struct pixel (*image)[width] = (struct pixel (*)[width]) *data;
 
     /**  please complete this function  **/
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
+    int i, j;
+    for (i = 0; i < height; i++) {
+        for (j = 0; j < width; j++) {
             bool is_over_threshold = image[i][j].r > strong_pixel;
             bool is_stronger_than_neighbour = false;
 
-            for (int dir_x = -1; dir_x <= 1; dir_x++) {
-                for (int dir_y = -1; dir_y <= 1; dir_y++) {
+            int dir_x, dir_y;
+            for (dir_x = -1; dir_x <= 1; dir_x++) {
+                for (dir_y = -1; dir_y <= 1; dir_y++) {
                     if (i + dir_x >= 0 && i + dir_x < height && j + dir_y >= 0 && j + dir_y < width && image[i + dir_x][j + dir_y].r > strong_pixel) {
                         is_stronger_than_neighbour = true;
                         break;
@@ -396,10 +417,12 @@ int main(int argc, char *argv[]) {
     /// Grayscale conversion
     convert_to_grayscale (image);
     if (debug) write_bmp ("stage0_grayscale.bmp", header, image);
+    printf("convert_to_grayscale complete\n");
 
     /** please uncomment after you implement gaussian_blur **/
     gaussian_blur (&image);
     if (debug) write_bmp ("stage1_gaussian.bmp", header, image);
+    printf("Gaussian blur complete\n");
 
 
     /** please uncomment after you implement sobel_filter **/
@@ -409,15 +432,18 @@ int main(int argc, char *argv[]) {
         write_signed_bmp ("stage2_gradient_y.bmp", header, G_y);
         write_bmp ("stage2_gradient.bmp", header, image);
     }
+    printf("sobel_filter complete\n");
 
     /** please uncomment after you implement non_max_suppress **/
     non_max_suppress (&image, G_x, G_y);
     if (debug) write_bmp ("stage3_nonmax_suppression.bmp", header, image);
+    printf("non_max_suppress complete\n");
 
     /// Hysteresis
     /** please uncomment after you implement hysteresis_filter **/
     hysteresis_filter (&image);
     if (debug) write_bmp ("stage4_hysteresis.bmp", header, image);
+    printf("hysteresis_filter complete\n");
 
     end = clock();
 
